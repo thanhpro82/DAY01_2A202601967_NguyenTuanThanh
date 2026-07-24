@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Competency Studio — Trợ Lý & Dashboard LLM</title>
+    <title>AI Engineering Studio Pro — Trợ Lý & LLM Laboratory</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
@@ -17,16 +17,16 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="brand">
-                <div class="logo-icon"><i class="fa-solid fa-brain-circuit"></i></div>
+                <div class="logo-icon glow-purple"><i class="fa-solid fa-atom"></i></div>
                 <div class="brand-text">
-                    <h2>AI Studio <span>v1.0</span></h2>
-                    <p>DAY 01 — LLM API</p>
+                    <h2>AI Studio <span>PRO v2.0</span></h2>
+                    <p>DAY 01 — LLM API & LAB</p>
                 </div>
             </div>
 
             <nav class="nav-menu">
                 <button class="nav-item active" data-tab="dashboard-tab">
-                    <i class="fa-solid fa-chart-pie"></i> Dashboard Tổng Quan
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê
                 </button>
                 <button class="nav-item" data-tab="chat-tab">
                     <i class="fa-solid fa-comments"></i> Trợ Lý CLI Chatbot
@@ -34,13 +34,16 @@
                 <button class="nav-item" data-tab="compare-tab">
                     <i class="fa-solid fa-scale-balanced"></i> Model Studio
                 </button>
+                <button class="nav-item" data-tab="batch-tab">
+                    <i class="fa-solid fa-layer-group"></i> Batch Prompt Studio
+                </button>
                 <button class="nav-item" data-tab="calculator-tab">
-                    <i class="fa-solid fa-calculator"></i> Tính Token & Chi Phí
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Visual Tokenizer
                 </button>
             </nav>
 
-            <div class="stats-card glass">
-                <h3><i class="fa-solid fa-gauge-high"></i> Quick Metrics</h3>
+            <div class="stats-card glass glow-card">
+                <h3><i class="fa-solid fa-gauge-high"></i> Live Telemetry</h3>
                 <div class="stat-row">
                     <span><i class="fa-solid fa-rotate-left"></i> Số lượt (Turns):</span>
                     <strong id="stat-turns">0</strong>
@@ -54,14 +57,14 @@
                     <strong id="stat-cost" class="highlight-green">$0.000000</strong>
                 </div>
                 <div class="stat-row">
-                    <span><i class="fa-solid fa-clock-rotate-left"></i> History:</span>
-                    <span id="stat-history-len" class="badge">0 / 8 msgs</span>
+                    <span><i class="fa-solid fa-clock-rotate-left"></i> History Window:</span>
+                    <span id="stat-history-len" class="badge badge-purple">0 / 8 msgs</span>
                 </div>
             </div>
 
             <div class="sidebar-footer">
-                <div class="user-badge">
-                    <i class="fa-solid fa-user-gear"></i>
+                <div class="user-badge glass">
+                    <div class="status-indicator online"></div>
                     <span>NguyenTuanThanh (K4)</span>
                 </div>
             </div>
@@ -69,63 +72,60 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
+
             <!-- TAB 0: DASHBOARD TỔNG QUAN -->
             <section id="dashboard-tab" class="tab-page active">
                 <header class="page-header glass">
                     <div class="header-info">
-                        <h1><i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê & Phân Tích LLM</h1>
-                        <p>Tổng quan sử dụng Token, Chi Phí Ước Tính, Tỷ Lệ Tối Ưu Chi Phí & Lịch Sử Gọi API</p>
+                        <h1><i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê & Architecture</h1>
+                        <p>Theo dõi Token, Chi phí, Tối ưu hóa Model & Sơ đồ kiến trúc đường ống LLM</p>
                     </div>
                     <button id="dash-refresh-btn" class="btn-primary">
                         <i class="fa-solid fa-arrows-rotate"></i> Cập Nhật
                     </button>
                 </header>
 
-                <!-- KPI Metric Cards Grid -->
                 <div class="kpi-grid">
-                    <div class="kpi-card glass">
+                    <div class="kpi-card glass glow-hover">
                         <div class="kpi-header">
-                            <span><i class="fa-solid fa-comments"></i> Tổng Số Lượt Chat</span>
+                            <span><i class="fa-solid fa-comments"></i> Số Lượt Hỏi Đáp</span>
                             <div class="kpi-icon icon-purple"><i class="fa-solid fa-messages"></i></div>
                         </div>
                         <h2 id="dash-kpi-turns">0</h2>
                         <p class="kpi-sub"><i class="fa-solid fa-check-circle"></i> Trợ lý tương tác active</p>
                     </div>
 
-                    <div class="kpi-card glass">
+                    <div class="kpi-card glass glow-hover">
                         <div class="kpi-header">
-                            <span><i class="fa-solid fa-database"></i> Tổng Số Tokens (tiktoken)</span>
+                            <span><i class="fa-solid fa-database"></i> Tokens (tiktoken)</span>
                             <div class="kpi-icon icon-cyan"><i class="fa-solid fa-cube"></i></div>
                         </div>
                         <h2 id="dash-kpi-tokens">0</h2>
                         <p class="kpi-sub" id="dash-kpi-tok-breakdown">Prompt: 0 | Reply: 0</p>
                     </div>
 
-                    <div class="kpi-card glass">
+                    <div class="kpi-card glass glow-hover">
                         <div class="kpi-header">
-                            <span><i class="fa-solid fa-wallet"></i> Chi Phí Tích Lũy (USD)</span>
+                            <span><i class="fa-solid fa-wallet"></i> Chi Phí Tích Lũy</span>
                             <div class="kpi-icon icon-green"><i class="fa-solid fa-dollar-sign"></i></div>
                         </div>
                         <h2 id="dash-kpi-cost" class="highlight-green">$0.000000</h2>
-                        <p class="kpi-sub"><i class="fa-solid fa-tags"></i> Tính theo bảng giá GPT-4o</p>
+                        <p class="kpi-sub"><i class="fa-solid fa-tags"></i> GPT-4o Standard Pricing</p>
                     </div>
 
-                    <div class="kpi-card glass">
+                    <div class="kpi-card glass glow-hover">
                         <div class="kpi-header">
-                            <span><i class="fa-solid fa-piggy-bank"></i> Tiết Kiệm (Nếu dùng Mini)</span>
+                            <span><i class="fa-solid fa-piggy-bank"></i> Mức Tiết Kiệm (Mini)</span>
                             <div class="kpi-icon icon-gold"><i class="fa-solid fa-shield-heart"></i></div>
                         </div>
                         <h2 id="dash-kpi-savings" class="highlight-gold">94.0%</h2>
-                        <p class="kpi-sub">Mini rẻ hơn ~15 lần so với GPT-4o</p>
+                        <p class="kpi-sub">GPT-4o-Mini tối ưu ngân sách</p>
                     </div>
                 </div>
 
-                <!-- Analysis Charts & Panels -->
                 <div class="grid-2">
-                    <!-- Token Ratio & Model Cost Estimation Panel -->
                     <div class="dash-panel glass">
                         <h3><i class="fa-solid fa-chart-column"></i> Phân Phối Token & Dự Toán Quy Mô</h3>
-                        
                         <div class="progress-bar-group">
                             <div class="progress-info">
                                 <span>Tỷ lệ Input vs Output Tokens:</span>
@@ -138,7 +138,7 @@
 
                         <hr class="divider">
 
-                        <h4>Dự Toán Chi Phí Khi Scale Quy Mô Rộng:</h4>
+                        <h4>Dự Toán Chi Phí Khi Scale Quy Mô:</h4>
                         <div class="projection-grid">
                             <div class="proj-box">
                                 <span class="proj-title">1,000 Lượt Chat (GPT-4o)</span>
@@ -159,52 +159,44 @@
                         </div>
                     </div>
 
-                    <!-- API Status & Active Configurations -->
+                    <!-- System Architecture Flow Diagram Card -->
                     <div class="dash-panel glass">
-                        <h3><i class="fa-solid fa-server"></i> Cấu Hình Hệ Thống & API Status</h3>
-                        
-                        <div class="config-list">
-                            <div class="config-item">
-                                <span><i class="fa-solid fa-microchip"></i> Model Chính (Main Model):</span>
-                                <strong id="dash-cfg-main">gpt-4o</strong>
-                            </div>
-                            <div class="config-item">
-                                <span><i class="fa-solid fa-bolt"></i> Model Tiết Kiệm (Mini Model):</span>
-                                <strong id="dash-cfg-mini">gpt-4o-mini</strong>
-                            </div>
-                            <div class="config-item">
-                                <span><i class="fa-solid fa-repeat"></i> Cơ Chế Chịu Lỗi (Retry):</span>
-                                <span class="status-pill status-active"><i class="fa-solid fa-circle-check"></i> Exponential Backoff</span>
-                            </div>
-                            <div class="config-item">
-                                <span><i class="fa-solid fa-memory"></i> Giới Hạn Lịch Sử (History):</span>
-                                <strong>4 lượt hội thoại (8 messages)</strong>
-                            </div>
-                            <div class="config-item">
-                                <span><i class="fa-solid fa-network-wired"></i> Trạng Thái Kết Nối API:</span>
-                                <span class="status-pill status-online" id="dash-api-status"><i class="fa-solid fa-signal"></i> Sẵn Sàng (Ready)</span>
-                            </div>
+                        <h3><i class="fa-solid fa-diagram-project"></i> Sơ Đồ Kiến Trúc Đường Ống (LLM Pipeline)</h3>
+                        <div class="architecture-flow">
+                            <div class="arch-node"><i class="fa-solid fa-keyboard"></i> User Input</div>
+                            <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="arch-node highlight-blue"><i class="fa-solid fa-shield"></i> System Prompt + History (-8 msgs)</div>
+                            <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="arch-node highlight-purple"><i class="fa-solid fa-rotate"></i> Retry Backoff (Base 0.1s x 2^attempt)</div>
+                            <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="arch-node highlight-cyan"><i class="fa-solid fa-bolt"></i> OpenAI Streaming API (stream=True)</div>
+                            <div class="arch-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="arch-node highlight-green"><i class="fa-solid fa-coins"></i> Tiktoken Counter & Cost Tracker</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 1: CHATBOT UI -->
+            <!-- TAB 1: CHATBOT UI PRO -->
             <section id="chat-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
-                        <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot (Streaming & Memory)</h1>
-                        <p>Streaming real-time, nhớ 4 lượt gần nhất, bọc Retry Backoff tự động</p>
+                        <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot PRO (Streaming, Voice & Tuning)</h1>
+                        <p>Điều chỉnh Temperature, Top_P, nhập giọng nói Voice, đếm token real-time</p>
                     </div>
 
-                    <div class="persona-selector">
-                        <label for="persona-select"><i class="fa-solid fa-masks-theater"></i> Chọn Persona:</label>
-                        <select id="persona-select">
-                            <option value="Bạn là trợ giảng thân thiện của khóa AI, trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.">🎓 Trợ Giảng AI Thân Thiện</option>
-                            <option value="Bạn là một Kỹ sư Phần mềm Chuyên nghiệp Senior, đưa ra câu trả lời chuẩn xác, kèm code mẫu tối ưu.">💻 Senior Software Engineer</option>
-                            <option value="Bạn là một nhà sáng tạo nội dung truyền cảm hứng, viết hấp dẫn và giàu cảm xúc.">✍️ Nhà Sáng Tạo Nội Dung</option>
-                            <option value="custom">✏️ Tự Nhập Persona Tùy Chỉnh...</option>
-                        </select>
+                    <div class="header-controls">
+                        <div class="persona-selector">
+                            <select id="persona-select">
+                                <option value="Bạn là trợ giảng thân thiện của khóa AI, trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.">🎓 Trợ Giảng AI Thân Thiện</option>
+                                <option value="Bạn là một Kỹ sư Phần mềm Chuyên nghiệp Senior, đưa ra câu trả lời chuẩn xác, kèm code mẫu tối ưu.">💻 Senior Software Engineer</option>
+                                <option value="Bạn là một nhà sáng tạo nội dung truyền cảm hứng, viết hấp dẫn và giàu cảm xúc.">✍️ Nhà Sáng Tạo Nội Dung</option>
+                                <option value="custom">✏️ Tự Nhập Persona Tùy Chỉnh...</option>
+                            </select>
+                        </div>
+                        <button id="export-chat-btn" class="btn-secondary" title="Xuất Lịch Sử Chat (Markdown)">
+                            <i class="fa-solid fa-download"></i> Export Markdown
+                        </button>
                     </div>
                 </header>
 
@@ -212,18 +204,37 @@
                     <input type="text" id="custom-persona-input" placeholder="Nhập System Prompt / Persona của bạn ở đây..." value="Bạn là một chuyên gia tư vấn AI tận tâm.">
                 </div>
 
+                <!-- Hyperparameters Control Tuning Bar -->
+                <div class="param-tuning-bar glass">
+                    <div class="param-group">
+                        <label><i class="fa-solid fa-fire"></i> Temperature: <span id="temp-val" class="param-num">0.7</span></label>
+                        <input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.7">
+                    </div>
+                    <div class="param-group">
+                        <label><i class="fa-solid fa-filter"></i> Top_P: <span id="topp-val" class="param-num">0.9</span></label>
+                        <input type="range" id="topp-slider" min="0.1" max="1" step="0.05" value="0.9">
+                    </div>
+                    <div class="param-group">
+                        <label><i class="fa-solid fa-text-height"></i> Max Tokens: <span id="maxtok-val" class="param-num">512</span></label>
+                        <input type="range" id="maxtok-slider" min="64" max="2048" step="64" value="512">
+                    </div>
+                </div>
+
                 <div class="chat-viewport glass" id="chat-viewport">
                     <div class="message system-welcome">
                         <div class="msg-avatar"><i class="fa-solid fa-sparkles"></i></div>
                         <div class="msg-bubble">
-                            <p>Xin chào! Mình là Trợ Lý AI của bạn. Hãy gửi câu hỏi bất kỳ để trải nghiệm tính năng streaming token real-time và đo lường chi phí chính xác!</p>
+                            <p>Xin chào! Mình là Trợ Lý AI Pro. Bạn có thể sử dụng Mic thu âm giọng nói, điều chỉnh Temperature/Top_P, hoặc bấm biểu tượng Loa để đọc văn bản!</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="chat-input-area glass">
                     <div class="input-wrapper">
-                        <textarea id="user-input" placeholder="Nhập tin nhắn của bạn... (Gõ 'quit' hoặc nhấn Send)" rows="1"></textarea>
+                        <button id="voice-rec-btn" class="btn-icon" title="Nói bằng Giọng Nói (Speech-to-Text)">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <textarea id="user-input" placeholder="Nhập tin nhắn... (hoặc ấn biểu tượng Mic để nói)" rows="1"></textarea>
                         <button id="send-btn" class="btn-primary">
                             <span>Gửi</span> <i class="fa-solid fa-paper-plane"></i>
                         </button>
@@ -232,8 +243,8 @@
                         </button>
                     </div>
                     <div class="input-hints">
-                        <span><i class="fa-solid fa-keyboard"></i> Nhấn Enter để gửi, Shift+Enter để xuống dòng</span>
-                        <span><i class="fa-solid fa-shield-halved"></i> Retry Backoff active</span>
+                        <span><i class="fa-solid fa-keyboard"></i> Enter để gửi, Shift+Enter xuống dòng</span>
+                        <span id="voice-status-text"><i class="fa-solid fa-circle-dot"></i> Mic sẵn sàng</span>
                     </div>
                 </div>
             </section>
@@ -258,7 +269,6 @@
                 </div>
 
                 <div class="compare-grid">
-                    <!-- GPT-4o Box -->
                     <div class="compare-card glass" id="card-gpt4o">
                         <div class="card-header">
                             <div class="model-badge badge-purple"><i class="fa-solid fa-brain"></i> GPT-4o</div>
@@ -272,7 +282,6 @@
                         </div>
                     </div>
 
-                    <!-- GPT-4o-Mini Box -->
                     <div class="compare-card glass" id="card-mini">
                         <div class="card-header">
                             <div class="model-badge badge-blue"><i class="fa-solid fa-bolt-lightning"></i> GPT-4o-Mini</div>
@@ -288,22 +297,57 @@
                 </div>
             </section>
 
-            <!-- TAB 3: TOKEN & COST CALCULATOR (LIVE REALTIME) -->
+            <!-- TAB 3: BATCH PROMPT STUDIO (NEW PRO) -->
+            <section id="batch-tab" class="tab-page">
+                <header class="page-header glass">
+                    <div class="header-info">
+                        <h1><i class="fa-solid fa-layer-group"></i> Batch Prompt Studio (Task BONUS)</h1>
+                        <p>Chạy thử nghiệm hàng loạt Prompt và tạo bảng tổng hợp <code>format_comparison_table</code></p>
+                    </div>
+                </header>
+
+                <div class="batch-container grid-2">
+                    <div class="batch-input-card glass">
+                        <h3><i class="fa-solid fa-list-check"></i> Danh Sách Prompts (Mỗi dòng 1 Prompt):</h3>
+                        <textarea id="batch-prompts-input" rows="12" placeholder="Gõ danh sách prompt ở đây (mỗi prompt trên một dòng)...
+Ví dụ:
+Giải thích khái niệm LLM trong 1 câu
+So sánh Python và Javascript
+Viết câu thơ về trí tuệ nhân tạo"></textarea>
+                        <button id="run-batch-btn" class="btn-primary full-width">
+                            <i class="fa-solid fa-play"></i> Chạy Batch Compare Hàng Loạt
+                        </button>
+                    </div>
+
+                    <div class="batch-output-card glass">
+                        <h3><i class="fa-solid fa-table"></i> Kết Quả Bảng Định Dạng (format_comparison_table)</h3>
+                        <pre id="batch-table-output" class="code-block">Bảng kết quả sẽ hiển thị dạng text table căn chỉnh chuẩn ở đây...</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: VISUAL TOKENIZER & LIVE CALCULATOR (NEW PRO) -->
             <section id="calculator-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
-                        <h1><i class="fa-solid fa-calculator"></i> Token & Cost Live Inspector</h1>
-                        <p>Đếm token và tính toán chi phí **TỰ ĐỘNG REAL-TIME** ngay khi bạn dán hoặc gõ văn bản!</p>
+                        <h1><i class="fa-solid fa-wand-magic-sparkles"></i> Visual Tokenizer & Live Inspector</h1>
+                        <p>Phân rã văn bản thành các **mảnh Token màu sắc** (tiktoken) và tính chi phí real-time</p>
                     </div>
                 </header>
 
                 <div class="calc-container grid-2">
                     <div class="calc-box glass">
                         <div class="calc-box-header">
-                            <h3><i class="fa-solid fa-pen-to-square"></i> Văn bản thử nghiệm (Prompt / Response):</h3>
+                            <h3><i class="fa-solid fa-pen-to-square"></i> Văn bản thử nghiệm (Prompt / Text):</h3>
                             <button id="calc-clear-text" class="btn-sm"><i class="fa-solid fa-eraser"></i> Xóa text</button>
                         </div>
-                        <textarea id="calc-live-text" rows="12" placeholder="Gõ hoặc dán bất kỳ văn bản tiếng Việt/Anh vào đây... Token và Chi phí sẽ tự động cập nhật lập tức!"></textarea>
+                        <textarea id="calc-live-text" rows="7" placeholder="Gõ hoặc dán bất kỳ văn bản tiếng Việt/Anh vào đây..."></textarea>
+                        
+                        <!-- Color Coded Tokens Visualizer Box -->
+                        <h3><i class="fa-solid fa-eye"></i> Mảnh Tokens Trực Quan (Color Chips):</h3>
+                        <div id="token-chips-container" class="token-chips-wrapper">
+                            <span class="chip-placeholder">Các mảnh token màu sắc sẽ xuất hiện tại đây...</span>
+                        </div>
                     </div>
 
                     <div class="calc-results glass">
@@ -330,19 +374,19 @@
 
                         <div class="model-cost-box">
                             <div class="cost-item">
-                                <div class="cost-title"><i class="fa-solid fa-brain"></i> Nếu dùng GPT-4o (Input):</div>
+                                <div class="cost-title"><i class="fa-solid fa-brain"></i> GPT-4o (Input):</div>
                                 <div class="cost-price" id="cost-gpt4o-in">$0.000000</div>
                             </div>
                             <div class="cost-item">
-                                <div class="cost-title"><i class="fa-solid fa-brain"></i> Nếu dùng GPT-4o (Output):</div>
+                                <div class="cost-title"><i class="fa-solid fa-brain"></i> GPT-4o (Output):</div>
                                 <div class="cost-price" id="cost-gpt4o-out">$0.000000</div>
                             </div>
                             <div class="cost-item highlight-green-box">
-                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> Nếu dùng GPT-4o-Mini (Input):</div>
+                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> GPT-4o-Mini (Input):</div>
                                 <div class="cost-price" id="cost-mini-in">$0.000000</div>
                             </div>
                             <div class="cost-item highlight-green-box">
-                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> Nếu dùng GPT-4o-Mini (Output):</div>
+                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> GPT-4o-Mini (Output):</div>
                                 <div class="cost-price" id="cost-mini-out">$0.000000</div>
                             </div>
                         </div>

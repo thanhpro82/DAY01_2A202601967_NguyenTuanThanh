@@ -20,6 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const clearChatBtn = document.getElementById('clear-chat-btn');
+    const exportChatBtn = document.getElementById('export-chat-btn');
+    const voiceRecBtn = document.getElementById('voice-rec-btn');
+    const voiceStatusText = document.getElementById('voice-status-text');
+
+    // Hyperparameters Sliders
+    const tempSlider = document.getElementById('temp-slider');
+    const tempVal = document.getElementById('temp-val');
+    const toppSlider = document.getElementById('topp-slider');
+    const toppVal = document.getElementById('topp-val');
+    const maxtokSlider = document.getElementById('maxtok-slider');
+    const maxtokVal = document.getElementById('maxtok-val');
 
     // Sidebar Stats
     const statTurns = document.getElementById('stat-turns');
@@ -40,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const proj10kGpt4o = document.getElementById('proj-10k-gpt4o');
     const proj10kMini = document.getElementById('proj-10k-mini');
     const dashRefreshBtn = document.getElementById('dash-refresh-btn');
+
+    // --- Sliders Event Listeners ---
+    if (tempSlider) tempSlider.addEventListener('input', () => tempVal.textContent = tempSlider.value);
+    if (toppSlider) toppSlider.addEventListener('input', () => toppVal.textContent = toppSlider.value);
+    if (maxtokSlider) maxtokSlider.addEventListener('input', () => maxtokVal.textContent = maxtokSlider.value);
 
     // --- Tab Navigation ---
     navItems.forEach(item => {
@@ -76,6 +92,80 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return personaSelect.value;
     }
+
+    // --- Speech Recognition (Voice Input) ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRecording = false;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'vi-VN';
+        recognition.continuous = false;
+
+        recognition.onstart = () => {
+            isRecording = true;
+            voiceRecBtn.classList.add('recording-active');
+            voiceStatusText.innerHTML = '<i class="fa-solid fa-microphone"></i> Đang nghe... Hãy nói ngay!';
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            voiceStatusText.innerHTML = '<i class="fa-solid fa-check"></i> Đã nhận diện giọng nói!';
+        };
+
+        recognition.onerror = (event) => {
+            voiceStatusText.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Lỗi Mic: ${event.error}`;
+        };
+
+        recognition.onend = () => {
+            isRecording = false;
+            voiceRecBtn.classList.remove('recording-active');
+            setTimeout(() => {
+                voiceStatusText.innerHTML = '<i class="fa-solid fa-circle-dot"></i> Mic sẵn sàng';
+            }, 3000);
+        };
+    } else {
+        voiceRecBtn.title = "Trình duyệt không hỗ trợ Web Speech API";
+    }
+
+    voiceRecBtn.addEventListener('click', () => {
+        if (!recognition) {
+            alert('Trình duyệt của bạn không hỗ trợ tính năng thu âm voice (Speech Recognition). Vui lòng dùng Chrome hoặc Edge.');
+            return;
+        }
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    });
+
+    // --- Export Chat to Markdown ---
+    exportChatBtn.addEventListener('click', () => {
+        if (chatHistory.length === 0) {
+            alert('Lịch sử hội thoại đang trống!');
+            return;
+        }
+
+        let mdContent = `# Lịch Sử Hội Thoại Trợ Lý AI — DAY 01\n\n`;
+        mdContent += `*Thời gian xuất:* ${new Date().toLocaleString()}\n`;
+        mdContent += `*Tổng lượt chat:* ${turnCount} | *Tokens:* ${totalTokensUsed} | *Chi phí:* $${totalCostUSD.toFixed(6)}\n\n---\n\n`;
+
+        chatHistory.forEach((msg, idx) => {
+            const roleName = msg.role === 'user' ? '👤 Người dùng' : '🤖 Trợ lý AI';
+            mdContent += `### ${roleName}\n${msg.content}\n\n`;
+        });
+
+        const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat_history_${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
 
     // --- Chat Logic & Streaming ---
     userInput.addEventListener('keydown', (e) => {
@@ -126,7 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     persona: getActivePersona(),
                     user_msg: text,
-                    history: chatHistory
+                    history: chatHistory,
+                    temperature: parseFloat(tempSlider ? tempSlider.value : 0.7),
+                    top_p: parseFloat(toppSlider ? toppSlider.value : 0.9),
+                    max_tokens: parseInt(maxtokSlider ? maxtokSlider.value : 512)
                 })
             });
 
@@ -161,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 totalCostUSD += (data.total_cost || 0.0);
                                 updateStats();
                                 updateDashboard();
+                                attachActionButtons(assistantMsgEl, accumulatedReply);
                             } else if (data.type === 'error') {
                                 bubble.textContent = `[Lỗi API]: ${data.message}`;
                             }
@@ -194,6 +288,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return msgDiv;
     }
 
+    function attachActionButtons(msgDiv, textContent) {
+        const bubble = msgDiv.querySelector('.msg-bubble');
+        if (msgDiv.querySelector('.msg-actions')) return;
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'msg-actions';
+        actionsDiv.innerHTML = `
+            <button class="action-btn speak-btn" title="Đọc văn bản (Text-to-Speech)">
+                <i class="fa-solid fa-volume-high"></i> Đọc
+            </button>
+            <button class="action-btn copy-btn" title="Sao chép văn bản">
+                <i class="fa-solid fa-copy"></i> Copy
+            </button>
+        `;
+
+        bubble.appendChild(actionsDiv);
+
+        actionsDiv.querySelector('.speak-btn').addEventListener('click', () => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(textContent);
+                utterance.lang = 'vi-VN';
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Trình duyệt không hỗ trợ Text-to-Speech');
+            }
+        });
+
+        actionsDiv.querySelector('.copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(textContent);
+            alert('Đã sao chép câu trả lời vào bộ nhớ tạm!');
+        });
+    }
+
     function updateStats() {
         statTurns.textContent = turnCount;
         statTokens.textContent = totalTokensUsed.toLocaleString();
@@ -214,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dashTokenRatio.textContent = `${promptPct}% Input / ${replyPct}% Output`;
         dashProgressFill.style.width = `${promptPct}%`;
 
-        // Projections calculation
         const avgCostPerTurn = turnCount > 0 ? (totalCostUSD / turnCount) : 0.0015;
         const proj1k4o = avgCostPerTurn * 1000;
         const proj1kMiniVal = proj1k4o * 0.06;
@@ -283,13 +410,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Live Real-Time Token & Cost Calculator ---
+    // --- Batch Prompt Studio ---
+    const runBatchBtn = document.getElementById('run-batch-btn');
+    const batchPromptsInput = document.getElementById('batch-prompts-input');
+    const batchTableOutput = document.getElementById('batch-table-output');
+
+    if (runBatchBtn) {
+        runBatchBtn.addEventListener('click', async () => {
+            const rawText = batchPromptsInput.value.trim();
+            if (!rawText) return;
+
+            const prompts = rawText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+            if (prompts.length === 0) return;
+
+            batchTableOutput.textContent = `⏳ Đang xử lý Batch Compare cho ${prompts.length} prompts... Xin chờ trong giây lát...`;
+            runBatchBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompts })
+                });
+
+                const data = await res.json();
+                if (data.table) {
+                    batchTableOutput.textContent = data.table;
+                } else if (data.error) {
+                    batchTableOutput.textContent = `Lỗi: ${data.error}`;
+                }
+            } catch (err) {
+                batchTableOutput.textContent = `Lỗi kết nối: ${err.message}`;
+            } finally {
+                runBatchBtn.disabled = false;
+            }
+        });
+    }
+
+    // --- Visual Tokenizer & Live Inspector ---
     const calcLiveText = document.getElementById('calc-live-text');
     const calcClearText = document.getElementById('calc-clear-text');
 
     const calcLiveTokens = document.getElementById('calc-live-tokens');
     const calcLiveWords = document.getElementById('calc-live-words');
     const calcLiveChars = document.getElementById('calc-live-chars');
+    const tokenChipsContainer = document.getElementById('token-chips-container');
 
     const costGpt4oIn = document.getElementById('cost-gpt4o-in');
     const costGpt4oOut = document.getElementById('cost-gpt4o-out');
@@ -318,16 +483,17 @@ document.addEventListener('DOMContentLoaded', () => {
             costGpt4oOut.textContent = '$0.000000';
             costMiniIn.textContent = '$0.000000';
             costMiniOut.textContent = '$0.000000';
+            tokenChipsContainer.innerHTML = '<span class="chip-placeholder">Các mảnh token màu sắc sẽ xuất hiện tại đây...</span>';
             return;
         }
 
         try {
+            // Fetch live calc
             const res = await fetch('/api/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
             });
-
             const data = await res.json();
             const tok = data.tokens || 0;
 
@@ -344,6 +510,25 @@ document.addEventListener('DOMContentLoaded', () => {
             costGpt4oOut.textContent = `$${g4out.toFixed(6)}`;
             costMiniIn.textContent = `$${minin.toFixed(6)}`;
             costMiniOut.textContent = `$${minout.toFixed(6)}`;
+
+            // Fetch Tokenizer Breakdown Chips
+            const tokRes = await fetch('/api/tokenize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+
+            const tokData = await tokRes.json();
+            if (tokData.tokens && tokData.tokens.length > 0) {
+                tokenChipsContainer.innerHTML = '';
+                tokData.tokens.forEach((t, i) => {
+                    const chip = document.createElement('span');
+                    chip.className = `token-chip chip-c${i % 5}`;
+                    chip.title = `Token ID: ${t.id}`;
+                    chip.textContent = t.piece.replace(/\n/g, '↵');
+                    tokenChipsContainer.appendChild(chip);
+                });
+            }
 
         } catch (err) {
             console.error('Calculator error:', err);

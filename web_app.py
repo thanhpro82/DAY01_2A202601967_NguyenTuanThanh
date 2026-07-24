@@ -19,6 +19,8 @@ try:
         count_tokens,
         estimate_cost,
         retry_with_backoff,
+        batch_compare,
+        format_comparison_table,
         OPENAI_MODEL,
         OPENAI_MINI_MODEL,
         PRICING_PER_1K_TOKENS,
@@ -26,6 +28,11 @@ try:
 except ImportError as e:
     print(f"Error importing template.py: {e}")
     sys.exit(1)
+
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 
 from openai import OpenAI
 
@@ -35,7 +42,6 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 class AIAppRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
-        # Suppress verbose log spam
         pass
 
     def send_json(self, data, status=200):
@@ -128,6 +134,10 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
             self.handle_compare(body)
         elif path == "/api/calculate":
             self.handle_calculate(body)
+        elif path == "/api/tokenize":
+            self.handle_tokenize(body)
+        elif path == "/api/batch":
+            self.handle_batch(body)
         else:
             self.send_error(404, "API Endpoint Not Found")
 
@@ -136,6 +146,9 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
         user_msg = body.get("user_msg", "")
         history = body.get("history", [])
         model = body.get("model", OPENAI_MODEL)
+        temperature = float(body.get("temperature", 0.7))
+        top_p = float(body.get("top_p", 0.9))
+        max_tokens = int(body.get("max_tokens", 512))
 
         if not user_msg.strip():
             self.send_json({"error": "Empty message"}, status=400)
@@ -159,6 +172,9 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
                     model=model,
                     messages=messages,
                     stream=True,
+                    temperature=temperature,
+                    top_p=top_p,
+                    max_tokens=max_tokens,
                 )
             )
 
@@ -221,13 +237,13 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
 
-            mock_reply = f"[Demo Mode — Chưa cấu hình OPENAI_API_KEY trong .env]\n\nChào bạn! Bạn vừa hỏi: \"{user_msg}\". Trợ lý AI đang phản hồi dưới dạng streaming giả lập."
+            mock_reply = f"[Demo Mode — Studio Pro]\n\nChào bạn! Bạn vừa hỏi: \"{user_msg}\". Trợ lý AI đang chạy ở chế độ demo siêu mượt với đầy đủ tính năng Pro."
             
             for char in mock_reply:
                 evt = json.dumps({"type": "chunk", "delta": char}, ensure_ascii=False)
                 self.wfile.write(f"data: {evt}\n\n".encode("utf-8"))
                 self.wfile.flush()
-                time.sleep(0.015)
+                time.sleep(0.012)
 
             new_history = (history + [
                 {"role": "user", "content": user_msg},
@@ -263,13 +279,12 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            # Fallback mock comparison
             self.send_json({
                 "prompt": prompt,
-                "gpt4o_answer": f"[Demo GPT-4o] Phân tích cho prompt: '{prompt}'.\nModel GPT-4o phản hồi chi tiết, toàn diện và chất lượng cao.",
-                "mini_answer": f"[Demo GPT-4o-Mini] Phân tích cho prompt: '{prompt}'.\nModel GPT-4o-Mini phản hồi cực kỳ nhanh gọn và tối ưu chi phí.",
-                "gpt4o_time": 0.42,
-                "mini_time": 0.15,
+                "gpt4o_answer": f"[Demo GPT-4o Pro] Phân tích cho: '{prompt}'.\n\nModel GPT-4o trả về kết quả phân tích đa chiều, sâu sắc và lập luận logic cao.",
+                "mini_answer": f"[Demo GPT-4o-Mini Pro] Phân tích cho: '{prompt}'.\n\nModel GPT-4o-Mini trả về câu trả lời tối ưu tốc độ và siêu tiết kiệm token.",
+                "gpt4o_time": 0.38,
+                "mini_time": 0.14,
                 "gpt4o_cost": 0.000125,
             })
             return
@@ -279,11 +294,10 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
             res["prompt"] = prompt
             self.send_json(res)
         except Exception as e:
-            # If real API call fails (e.g. invalid key or network timeout)
             self.send_json({
                 "prompt": prompt,
-                "gpt4o_answer": f"[Lỗi gọi API GPT-4o]: {e}\n(Vui lòng kiểm tra OPENAI_API_KEY trong file .env)",
-                "mini_answer": f"[Lỗi gọi API Mini]: {e}\n(Vui lòng kiểm tra OPENAI_API_KEY trong file .env)",
+                "gpt4o_answer": f"[Lỗi gọi API GPT-4o]: {e}\n(Kiểm tra OPENAI_API_KEY trong .env)",
+                "mini_answer": f"[Lỗi gọi API Mini]: {e}\n(Kiểm tra OPENAI_API_KEY trong .env)",
                 "gpt4o_time": 0.0,
                 "mini_time": 0.0,
                 "gpt4o_cost": 0.0,
@@ -295,7 +309,6 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
         response = body.get("response", "")
         model = body.get("model", OPENAI_MODEL)
 
-        # If user provides single text box (live counter)
         if text and not prompt and not response:
             tok_count = count_tokens(text, model)
             pricing = PRICING_PER_1K_TOKENS.get(model, PRICING_PER_1K_TOKENS["gpt-4o"])
@@ -323,6 +336,64 @@ class AIAppRequestHandler(BaseHTTPRequestHandler):
             "total_tokens": tok_p + tok_r,
             "cost_breakdown": cost_info,
         })
+
+    def handle_tokenize(self, body):
+        text = body.get("text", "")
+        model = body.get("model", OPENAI_MODEL)
+        token_pieces = []
+        if tiktoken:
+            try:
+                try:
+                    encoding = tiktoken.encoding_for_model(model)
+                except KeyError:
+                    encoding = tiktoken.get_encoding("cl100k_base")
+
+                token_ids = encoding.encode(text)
+                for tid in token_ids:
+                    try:
+                        piece_str = encoding.decode([tid])
+                    except Exception:
+                        piece_str = str(tid)
+                    token_pieces.append({"id": tid, "piece": piece_str})
+            except Exception:
+                token_pieces = [{"id": i, "piece": word} for i, word in enumerate(text.split())]
+        else:
+            token_pieces = [{"id": i, "piece": word} for i, word in enumerate(text.split())]
+
+        self.send_json({
+            "total_tokens": len(token_pieces),
+            "tokens": token_pieces,
+        })
+
+    def handle_batch(self, body):
+        prompts = body.get("prompts", [])
+        if not prompts:
+            self.send_json({"error": "No prompts provided"}, status=400)
+            return
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            # Mock batch compare
+            results = []
+            for p in prompts:
+                results.append({
+                    "prompt": p,
+                    "gpt4o_answer": f"[Demo GPT-4o] Phản hồi cho: {p}",
+                    "mini_answer": f"[Demo Mini] Phản hồi cho: {p}",
+                    "gpt4o_time": 0.35,
+                    "mini_time": 0.12,
+                    "gpt4o_cost": 0.0001,
+                })
+            table_str = format_comparison_table(results)
+            self.send_json({"results": results, "table": table_str})
+            return
+
+        try:
+            results = batch_compare(prompts)
+            table_str = format_comparison_table(results)
+            self.send_json({"results": results, "table": table_str})
+        except Exception as e:
+            self.send_json({"error": str(e)}, status=500)
 
 
 def run_server(port=8000):
