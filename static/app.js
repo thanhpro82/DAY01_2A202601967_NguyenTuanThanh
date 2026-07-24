@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let chatHistory = [];
     let turnCount = 0;
     let totalTokensUsed = 0;
+    let promptTokensUsed = 0;
+    let completionTokensUsed = 0;
     let totalCostUSD = 0.0;
     let isStreaming = false;
 
@@ -19,10 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const clearChatBtn = document.getElementById('clear-chat-btn');
 
+    // Sidebar Stats
     const statTurns = document.getElementById('stat-turns');
     const statTokens = document.getElementById('stat-tokens');
     const statCost = document.getElementById('stat-cost');
     const statHistoryLen = document.getElementById('stat-history-len');
+
+    // Dashboard KPIs
+    const dashKpiTurns = document.getElementById('dash-kpi-turns');
+    const dashKpiTokens = document.getElementById('dash-kpi-tokens');
+    const dashKpiTokBreakdown = document.getElementById('dash-kpi-tok-breakdown');
+    const dashKpiCost = document.getElementById('dash-kpi-cost');
+    const dashTokenRatio = document.getElementById('dash-token-ratio');
+    const dashProgressFill = document.getElementById('dash-progress-fill');
+
+    const proj1kGpt4o = document.getElementById('proj-1k-gpt4o');
+    const proj1kMini = document.getElementById('proj-1k-mini');
+    const proj10kGpt4o = document.getElementById('proj-10k-gpt4o');
+    const proj10kMini = document.getElementById('proj-10k-mini');
+    const dashRefreshBtn = document.getElementById('dash-refresh-btn');
 
     // --- Tab Navigation ---
     navItems.forEach(item => {
@@ -33,8 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             item.classList.add('active');
             document.getElementById(targetTab).classList.add('active');
+
+            if (targetTab === 'dashboard-tab') {
+                updateDashboard();
+            }
         });
     });
+
+    if (dashRefreshBtn) {
+        dashRefreshBtn.addEventListener('click', updateDashboard);
+    }
 
     // --- Persona Selector Toggle ---
     personaSelect.addEventListener('change', () => {
@@ -131,8 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 chatHistory = data.history || [];
                                 turnCount += 1;
                                 totalTokensUsed += (data.tokens_used || 0);
+                                promptTokensUsed += (data.prompt_tokens || 0);
+                                completionTokensUsed += (data.completion_tokens || 0);
                                 totalCostUSD += (data.total_cost || 0.0);
                                 updateStats();
+                                updateDashboard();
                             } else if (data.type === 'error') {
                                 bubble.textContent = `[Lỗi API]: ${data.message}`;
                             }
@@ -171,6 +199,32 @@ document.addEventListener('DOMContentLoaded', () => {
         statTokens.textContent = totalTokensUsed.toLocaleString();
         statCost.textContent = `$${totalCostUSD.toFixed(6)}`;
         statHistoryLen.textContent = `${chatHistory.length} / 8 msgs`;
+    }
+
+    function updateDashboard() {
+        if (!dashKpiTurns) return;
+        dashKpiTurns.textContent = turnCount;
+        dashKpiTokens.textContent = totalTokensUsed.toLocaleString();
+        dashKpiTokBreakdown.textContent = `Prompt: ${promptTokensUsed.toLocaleString()} | Reply: ${completionTokensUsed.toLocaleString()}`;
+        dashKpiCost.textContent = `$${totalCostUSD.toFixed(6)}`;
+
+        const total = totalTokensUsed || 1;
+        const promptPct = Math.round((promptTokensUsed / total) * 100);
+        const replyPct = 100 - promptPct;
+        dashTokenRatio.textContent = `${promptPct}% Input / ${replyPct}% Output`;
+        dashProgressFill.style.width = `${promptPct}%`;
+
+        // Projections calculation
+        const avgCostPerTurn = turnCount > 0 ? (totalCostUSD / turnCount) : 0.0015;
+        const proj1k4o = avgCostPerTurn * 1000;
+        const proj1kMiniVal = proj1k4o * 0.06;
+        const proj10k4o = avgCostPerTurn * 10000;
+        const proj10kMiniVal = proj10k4o * 0.06;
+
+        proj1kGpt4o.textContent = `$${proj1k4o.toFixed(2)}`;
+        proj1kMini.textContent = `$${proj1kMiniVal.toFixed(2)}`;
+        proj10kGpt4o.textContent = `$${proj10k4o.toFixed(2)}`;
+        proj10kMini.textContent = `$${proj10kMiniVal.toFixed(2)}`;
     }
 
     function escapeHtml(text) {
@@ -281,9 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
             calcLiveWords.textContent = (data.words || 0).toLocaleString();
             calcLiveChars.textContent = (data.chars || 0).toLocaleString();
 
-            // Pricing reference:
-            // GPT-4o: Input $0.0025 / 1k, Output $0.010 / 1k
-            // GPT-4o-Mini: Input $0.00015 / 1k, Output $0.0006 / 1k
             const g4in = (tok / 1000) * 0.0025;
             const g4out = (tok / 1000) * 0.010;
             const minin = (tok / 1000) * 0.00015;
@@ -298,4 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Calculator error:', err);
         }
     }
+
+    // Initialize Dashboard on page load
+    updateDashboard();
 });

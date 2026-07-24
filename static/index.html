@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Competency Studio — Trợ Lý & Studio So Sánh LLM</title>
+    <title>AI Competency Studio — Trợ Lý & Dashboard LLM</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,10 @@
             </div>
 
             <nav class="nav-menu">
-                <button class="nav-item active" data-tab="chat-tab">
+                <button class="nav-item active" data-tab="dashboard-tab">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard Tổng Quan
+                </button>
+                <button class="nav-item" data-tab="chat-tab">
                     <i class="fa-solid fa-comments"></i> Trợ Lý CLI Chatbot
                 </button>
                 <button class="nav-item" data-tab="compare-tab">
@@ -37,7 +40,7 @@
             </nav>
 
             <div class="stats-card glass">
-                <h3><i class="fa-solid fa-chart-pie"></i> Thống Kê Phiên Chat</h3>
+                <h3><i class="fa-solid fa-gauge-high"></i> Quick Metrics</h3>
                 <div class="stat-row">
                     <span><i class="fa-solid fa-rotate-left"></i> Số lượt (Turns):</span>
                     <strong id="stat-turns">0</strong>
@@ -66,8 +69,128 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
+            <!-- TAB 0: DASHBOARD TỔNG QUAN -->
+            <section id="dashboard-tab" class="tab-page active">
+                <header class="page-header glass">
+                    <div class="header-info">
+                        <h1><i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê & Phân Tích LLM</h1>
+                        <p>Tổng quan sử dụng Token, Chi Phí Ước Tính, Tỷ Lệ Tối Ưu Chi Phí & Lịch Sử Gọi API</p>
+                    </div>
+                    <button id="dash-refresh-btn" class="btn-primary">
+                        <i class="fa-solid fa-arrows-rotate"></i> Cập Nhật
+                    </button>
+                </header>
+
+                <!-- KPI Metric Cards Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card glass">
+                        <div class="kpi-header">
+                            <span><i class="fa-solid fa-comments"></i> Tổng Số Lượt Chat</span>
+                            <div class="kpi-icon icon-purple"><i class="fa-solid fa-messages"></i></div>
+                        </div>
+                        <h2 id="dash-kpi-turns">0</h2>
+                        <p class="kpi-sub"><i class="fa-solid fa-check-circle"></i> Trợ lý tương tác active</p>
+                    </div>
+
+                    <div class="kpi-card glass">
+                        <div class="kpi-header">
+                            <span><i class="fa-solid fa-database"></i> Tổng Số Tokens (tiktoken)</span>
+                            <div class="kpi-icon icon-cyan"><i class="fa-solid fa-cube"></i></div>
+                        </div>
+                        <h2 id="dash-kpi-tokens">0</h2>
+                        <p class="kpi-sub" id="dash-kpi-tok-breakdown">Prompt: 0 | Reply: 0</p>
+                    </div>
+
+                    <div class="kpi-card glass">
+                        <div class="kpi-header">
+                            <span><i class="fa-solid fa-wallet"></i> Chi Phí Tích Lũy (USD)</span>
+                            <div class="kpi-icon icon-green"><i class="fa-solid fa-dollar-sign"></i></div>
+                        </div>
+                        <h2 id="dash-kpi-cost" class="highlight-green">$0.000000</h2>
+                        <p class="kpi-sub"><i class="fa-solid fa-tags"></i> Tính theo bảng giá GPT-4o</p>
+                    </div>
+
+                    <div class="kpi-card glass">
+                        <div class="kpi-header">
+                            <span><i class="fa-solid fa-piggy-bank"></i> Tiết Kiệm (Nếu dùng Mini)</span>
+                            <div class="kpi-icon icon-gold"><i class="fa-solid fa-shield-heart"></i></div>
+                        </div>
+                        <h2 id="dash-kpi-savings" class="highlight-gold">94.0%</h2>
+                        <p class="kpi-sub">Mini rẻ hơn ~15 lần so với GPT-4o</p>
+                    </div>
+                </div>
+
+                <!-- Analysis Charts & Panels -->
+                <div class="grid-2">
+                    <!-- Token Ratio & Model Cost Estimation Panel -->
+                    <div class="dash-panel glass">
+                        <h3><i class="fa-solid fa-chart-column"></i> Phân Phối Token & Dự Toán Quy Mô</h3>
+                        
+                        <div class="progress-bar-group">
+                            <div class="progress-info">
+                                <span>Tỷ lệ Input vs Output Tokens:</span>
+                                <strong id="dash-token-ratio">0% Input / 0% Output</strong>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" id="dash-progress-fill" style="width: 50%;"></div>
+                            </div>
+                        </div>
+
+                        <hr class="divider">
+
+                        <h4>Dự Toán Chi Phí Khi Scale Quy Mô Rộng:</h4>
+                        <div class="projection-grid">
+                            <div class="proj-box">
+                                <span class="proj-title">1,000 Lượt Chat (GPT-4o)</span>
+                                <span class="proj-value" id="proj-1k-gpt4o">$0.00</span>
+                            </div>
+                            <div class="proj-box highlight-green-bg">
+                                <span class="proj-title">1,000 Lượt Chat (GPT-4o-Mini)</span>
+                                <span class="proj-value highlight-green" id="proj-1k-mini">$0.00</span>
+                            </div>
+                            <div class="proj-box">
+                                <span class="proj-title">10,000 Lượt Chat (GPT-4o)</span>
+                                <span class="proj-value" id="proj-10k-gpt4o">$0.00</span>
+                            </div>
+                            <div class="proj-box highlight-green-bg">
+                                <span class="proj-title">10,000 Lượt Chat (GPT-4o-Mini)</span>
+                                <span class="proj-value highlight-green" id="proj-10k-mini">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Status & Active Configurations -->
+                    <div class="dash-panel glass">
+                        <h3><i class="fa-solid fa-server"></i> Cấu Hình Hệ Thống & API Status</h3>
+                        
+                        <div class="config-list">
+                            <div class="config-item">
+                                <span><i class="fa-solid fa-microchip"></i> Model Chính (Main Model):</span>
+                                <strong id="dash-cfg-main">gpt-4o</strong>
+                            </div>
+                            <div class="config-item">
+                                <span><i class="fa-solid fa-bolt"></i> Model Tiết Kiệm (Mini Model):</span>
+                                <strong id="dash-cfg-mini">gpt-4o-mini</strong>
+                            </div>
+                            <div class="config-item">
+                                <span><i class="fa-solid fa-repeat"></i> Cơ Chế Chịu Lỗi (Retry):</span>
+                                <span class="status-pill status-active"><i class="fa-solid fa-circle-check"></i> Exponential Backoff</span>
+                            </div>
+                            <div class="config-item">
+                                <span><i class="fa-solid fa-memory"></i> Giới Hạn Lịch Sử (History):</span>
+                                <strong>4 lượt hội thoại (8 messages)</strong>
+                            </div>
+                            <div class="config-item">
+                                <span><i class="fa-solid fa-network-wired"></i> Trạng Thái Kết Nối API:</span>
+                                <span class="status-pill status-online" id="dash-api-status"><i class="fa-solid fa-signal"></i> Sẵn Sàng (Ready)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- TAB 1: CHATBOT UI -->
-            <section id="chat-tab" class="tab-page active">
+            <section id="chat-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
                         <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot (Streaming & Memory)</h1>
