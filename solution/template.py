@@ -503,8 +503,12 @@ def batch_compare(prompts: list[str]) -> list[dict]:
         List các dict — mỗi dict là kết quả compare_models kèm thêm
         key "prompt" chứa prompt gốc.
     """
-    # TODO (bonus): lặp qua prompts, gọi compare_models, thêm key "prompt"
-    raise NotImplementedError("Implement batch_compare")
+    results = []
+    for prompt in prompts:
+        res = compare_models(prompt)
+        res["prompt"] = prompt
+        results.append(res)
+    return results
 
 
 def format_comparison_table(results: list[dict]) -> str:
@@ -514,8 +518,29 @@ def format_comparison_table(results: list[dict]) -> str:
     Cột: Prompt | GPT-4o Response | Mini Response | GPT-4o Latency | Mini Latency
     Gợi ý: cắt text dài còn 40 ký tự cho dễ nhìn.
     """
-    # TODO (bonus): dựng chuỗi bảng và trả về
-    raise NotImplementedError("Implement format_comparison_table")
+    header = f"{'Prompt':<40} | {'GPT-4o Response':<40} | {'Mini Response':<40} | {'GPT-4o Latency':<15} | {'Mini Latency':<15}"
+    separator = "-" * len(header)
+    lines = [header, separator]
+
+    for item in results:
+        p = item.get("prompt", "").replace("\n", " ")
+        if len(p) > 37:
+            p = p[:37] + "..."
+
+        g_ans = item.get("gpt4o_answer", "").replace("\n", " ")
+        if len(g_ans) > 37:
+            g_ans = g_ans[:37] + "..."
+
+        m_ans = item.get("mini_answer", "").replace("\n", " ")
+        if len(m_ans) > 37:
+            m_ans = m_ans[:37] + "..."
+
+        g_time = f"{item.get('gpt4o_time', 0.0):.2f}s"
+        m_time = f"{item.get('mini_time', 0.0):.2f}s"
+
+        lines.append(f"{p:<40} | {g_ans:<40} | {m_ans:<40} | {g_time:<15} | {m_time:<15}")
+
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
