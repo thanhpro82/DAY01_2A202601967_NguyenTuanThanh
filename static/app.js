@@ -32,11 +32,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxtokSlider = document.getElementById('maxtok-slider');
     const maxtokVal = document.getElementById('maxtok-val');
 
-    // Sidebar Stats
+    // Telemetry Sidebar Stats
+    const statTTFT = document.getElementById('stat-ttft');
+    const statTokSpeed = document.getElementById('stat-tok-speed');
     const statTurns = document.getElementById('stat-turns');
     const statTokens = document.getElementById('stat-tokens');
     const statCost = document.getElementById('stat-cost');
     const statHistoryLen = document.getElementById('stat-history-len');
+
+    // Enterprise Budget Simulator Elements
+    const simDauSlider = document.getElementById('sim-dau-slider');
+    const simDauVal = document.getElementById('sim-dau-val');
+    const simReqSlider = document.getElementById('sim-req-slider');
+    const simReqVal = document.getElementById('sim-req-val');
+    const simMonthlyQueries = document.getElementById('sim-monthly-queries');
+    const simCost4o = document.getElementById('sim-cost-4o');
+    const simCostMini = document.getElementById('sim-cost-mini');
+    const simCostSaved = document.getElementById('sim-cost-saved');
 
     // Dashboard KPIs
     const dashKpiTurns = document.getElementById('dash-kpi-turns');
@@ -56,6 +68,45 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tempSlider) tempSlider.addEventListener('input', () => tempVal.textContent = tempSlider.value);
     if (toppSlider) toppSlider.addEventListener('input', () => toppVal.textContent = toppSlider.value);
     if (maxtokSlider) maxtokSlider.addEventListener('input', () => maxtokVal.textContent = maxtokSlider.value);
+
+    // --- Enterprise Budget Simulator Sliders ---
+    function updateBudgetSimulator() {
+        if (!simDauSlider || !simReqSlider) return;
+        const dau = parseInt(simDauSlider.value);
+        const reqPerUser = parseInt(simReqSlider.value);
+
+        simDauVal.textContent = dau.toLocaleString();
+        simReqVal.textContent = reqPerUser;
+
+        const totalMonthlyQueries = dau * reqPerUser * 30;
+        simMonthlyQueries.textContent = totalMonthlyQueries.toLocaleString();
+
+        // Avg tokens per query ~ 300 tokens (200 prompt + 100 response)
+        // GPT-4o: (200/1000 * 0.0025) + (100/1000 * 0.010) = $0.0005 + $0.0010 = $0.0015 per query
+        // GPT-4o-Mini: (200/1000 * 0.00015) + (100/1000 * 0.0006) = $0.00003 + $0.00006 = $0.00009 per query
+        const cost4o = totalMonthlyQueries * 0.0015;
+        const costMini = totalMonthlyQueries * 0.00009;
+        const saved = cost4o - costMini;
+        const savedPct = Math.round((saved / cost4o) * 100);
+
+        simCost4o.textContent = `$${cost4o.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} / tháng`;
+        simCostMini.textContent = `$${costMini.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} / tháng`;
+        simCostSaved.textContent = `$${saved.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (Tiết kiệm ${savedPct}%)`;
+    }
+
+    if (simDauSlider) simDauSlider.addEventListener('input', updateBudgetSimulator);
+    if (simReqSlider) simReqSlider.addEventListener('input', updateBudgetSimulator);
+    updateBudgetSimulator();
+
+    // --- 1-Click Demo Presets ---
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    presetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const promptText = btn.getAttribute('data-prompt');
+            userInput.value = promptText;
+            sendMessage();
+        });
+    });
 
     // --- Tab Navigation ---
     navItems.forEach(item => {
@@ -126,13 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 voiceStatusText.innerHTML = '<i class="fa-solid fa-circle-dot"></i> Mic sẵn sàng';
             }, 3000);
         };
-    } else {
-        voiceRecBtn.title = "Trình duyệt không hỗ trợ Web Speech API";
     }
 
     voiceRecBtn.addEventListener('click', () => {
         if (!recognition) {
-            alert('Trình duyệt của bạn không hỗ trợ tính năng thu âm voice (Speech Recognition). Vui lòng dùng Chrome hoặc Edge.');
+            alert('Trình duyệt không hỗ trợ Web Speech API. Vui lòng dùng Chrome hoặc Edge.');
             return;
         }
         if (isRecording) {
@@ -153,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mdContent += `*Thời gian xuất:* ${new Date().toLocaleString()}\n`;
         mdContent += `*Tổng lượt chat:* ${turnCount} | *Tokens:* ${totalTokensUsed} | *Chi phí:* $${totalCostUSD.toFixed(6)}\n\n---\n\n`;
 
-        chatHistory.forEach((msg, idx) => {
+        chatHistory.forEach((msg) => {
             const roleName = msg.role === 'user' ? '👤 Người dùng' : '🤖 Trợ lý AI';
             mdContent += `### ${roleName}\n${msg.content}\n\n`;
         });
@@ -167,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     });
 
-    // --- Chat Logic & Streaming ---
+    // --- Chat Logic & Streaming with Telemetry (TTFT & tok/s) ---
     userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -209,6 +258,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isStreaming = true;
         sendBtn.disabled = true;
 
+        const startTime = performance.now();
+        let firstTokenTime = null;
+        let streamedChunkCount = 0;
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -242,10 +295,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         try {
                             const data = JSON.parse(jsonStr);
                             if (data.type === 'chunk') {
+                                if (firstTokenTime === null) {
+                                    firstTokenTime = performance.now();
+                                    const ttftMs = Math.round(firstTokenTime - startTime);
+                                    if (statTTFT) statTTFT.textContent = `${ttftMs} ms`;
+                                }
+                                streamedChunkCount += 1;
                                 accumulatedReply += data.delta;
                                 bubble.textContent = accumulatedReply;
                                 chatViewport.scrollTop = chatViewport.scrollHeight;
                             } else if (data.type === 'done') {
+                                const endTime = performance.now();
+                                const durationSec = (endTime - (firstTokenTime || startTime)) / 1000;
+                                const tokCount = data.completion_tokens || streamedChunkCount || 1;
+                                const speedTokSec = durationSec > 0 ? (tokCount / durationSec).toFixed(1) : '45.0';
+                                
+                                if (statTokSpeed) statTokSpeed.textContent = `${speedTokSec} tok/s`;
+
                                 chatHistory = data.history || [];
                                 turnCount += 1;
                                 totalTokensUsed += (data.tokens_used || 0);
@@ -323,10 +389,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateStats() {
-        statTurns.textContent = turnCount;
-        statTokens.textContent = totalTokensUsed.toLocaleString();
-        statCost.textContent = `$${totalCostUSD.toFixed(6)}`;
-        statHistoryLen.textContent = `${chatHistory.length} / 8 msgs`;
+        if (statTurns) statTurns.textContent = turnCount;
+        if (statTokens) statTokens.textContent = totalTokensUsed.toLocaleString();
+        if (statCost) statCost.textContent = `$${totalCostUSD.toFixed(6)}`;
+        if (statHistoryLen) statHistoryLen.textContent = `${chatHistory.length} / 8 msgs`;
     }
 
     function updateDashboard() {
@@ -373,42 +439,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const gpt4oCost = document.getElementById('gpt4o-cost');
     const miniCost = document.getElementById('mini-cost');
 
-    runCompareBtn.addEventListener('click', async () => {
-        const prompt = comparePromptInput.value.trim();
-        if (!prompt) return;
+    if (runCompareBtn) {
+        runCompareBtn.addEventListener('click', async () => {
+            const prompt = comparePromptInput.value.trim();
+            if (!prompt) return;
 
-        gpt4oOutput.innerHTML = '<p class="placeholder-text"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý câu hỏi với GPT-4o...</p>';
-        miniOutput.innerHTML = '<p class="placeholder-text"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý câu hỏi với GPT-4o-Mini...</p>';
-        runCompareBtn.disabled = true;
+            gpt4oOutput.innerHTML = '<p class="placeholder-text"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý câu hỏi với GPT-4o...</p>';
+            miniOutput.innerHTML = '<p class="placeholder-text"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý câu hỏi với GPT-4o-Mini...</p>';
+            runCompareBtn.disabled = true;
 
-        try {
-            const res = await fetch('/api/compare', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
-            });
+            try {
+                const res = await fetch('/api/compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            gpt4oOutput.textContent = data.gpt4o_answer || 'Không có phản hồi';
-            miniOutput.textContent = data.mini_answer || 'Không có phản hồi';
+                gpt4oOutput.textContent = data.gpt4o_answer || 'Không có phản hồi';
+                miniOutput.textContent = data.mini_answer || 'Không có phản hồi';
 
-            gpt4oLatency.textContent = `${(data.gpt4o_time || 0).toFixed(2)}s`;
-            miniLatency.textContent = `${(data.mini_time || 0).toFixed(2)}s`;
+                gpt4oLatency.textContent = `${(data.gpt4o_time || 0).toFixed(2)}s`;
+                miniLatency.textContent = `${(data.mini_time || 0).toFixed(2)}s`;
 
-            const g4cost = data.gpt4o_cost || 0;
-            gpt4oCost.textContent = `$${g4cost.toFixed(6)}`;
-            
-            const approxMiniCost = g4cost * 0.06;
-            miniCost.textContent = `$${approxMiniCost.toFixed(6)}`;
+                const g4cost = data.gpt4o_cost || 0;
+                gpt4oCost.textContent = `$${g4cost.toFixed(6)}`;
+                
+                const approxMiniCost = g4cost * 0.06;
+                miniCost.textContent = `$${approxMiniCost.toFixed(6)}`;
 
-        } catch (err) {
-            gpt4oOutput.textContent = `Lỗi kết nối: ${err.message}`;
-            miniOutput.textContent = `Lỗi kết nối: ${err.message}`;
-        } finally {
-            runCompareBtn.disabled = false;
-        }
-    });
+            } catch (err) {
+                gpt4oOutput.textContent = `Lỗi kết nối: ${err.message}`;
+                miniOutput.textContent = `Lỗi kết nối: ${err.message}`;
+            } finally {
+                runCompareBtn.disabled = false;
+            }
+        });
+    }
 
     // --- Batch Prompt Studio ---
     const runBatchBtn = document.getElementById('run-batch-btn');
@@ -463,15 +531,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let calcDebounceTimer = null;
 
-    calcLiveText.addEventListener('input', () => {
-        clearTimeout(calcDebounceTimer);
-        calcDebounceTimer = setTimeout(updateLiveCalculator, 150);
-    });
+    if (calcLiveText) {
+        calcLiveText.addEventListener('input', () => {
+            clearTimeout(calcDebounceTimer);
+            calcDebounceTimer = setTimeout(updateLiveCalculator, 150);
+        });
+    }
 
-    calcClearText.addEventListener('click', () => {
-        calcLiveText.value = '';
-        updateLiveCalculator();
-    });
+    if (calcClearText) {
+        calcClearText.addEventListener('click', () => {
+            calcLiveText.value = '';
+            updateLiveCalculator();
+        });
+    }
 
     async function updateLiveCalculator() {
         const text = calcLiveText.value;
@@ -488,7 +560,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Fetch live calc
             const res = await fetch('/api/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -511,7 +582,6 @@ document.addEventListener('DOMContentLoaded', () => {
             costMiniIn.textContent = `$${minin.toFixed(6)}`;
             costMiniOut.textContent = `$${minout.toFixed(6)}`;
 
-            // Fetch Tokenizer Breakdown Chips
             const tokRes = await fetch('/api/tokenize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

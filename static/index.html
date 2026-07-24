@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Engineering Studio Pro — Trợ Lý & LLM Laboratory</title>
+    <title>AI Engineering Studio PRO — Demo & Laboratory Edition</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
             <div class="brand">
                 <div class="logo-icon glow-purple"><i class="fa-solid fa-atom"></i></div>
                 <div class="brand-text">
-                    <h2>AI Studio <span>PRO v2.0</span></h2>
+                    <h2>AI Studio <span>DEMO PRO</span></h2>
                     <p>DAY 01 — LLM API & LAB</p>
                 </div>
             </div>
@@ -43,9 +43,17 @@
             </nav>
 
             <div class="stats-card glass glow-card">
-                <h3><i class="fa-solid fa-gauge-high"></i> Live Telemetry</h3>
+                <h3><i class="fa-solid fa-gauge-high"></i> Telemetry & Speedometer</h3>
                 <div class="stat-row">
-                    <span><i class="fa-solid fa-rotate-left"></i> Số lượt (Turns):</span>
+                    <span><i class="fa-solid fa-bolt"></i> TTFT (Độ trễ đầu):</span>
+                    <strong id="stat-ttft" class="highlight-cyan">0 ms</strong>
+                </div>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-gauge"></i> Tốc độ Token:</span>
+                    <strong id="stat-tok-speed" class="highlight-gold">0.0 tok/s</strong>
+                </div>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-rotate-left"></i> Lượt (Turns):</span>
                     <strong id="stat-turns">0</strong>
                 </div>
                 <div class="stat-row">
@@ -57,7 +65,7 @@
                     <strong id="stat-cost" class="highlight-green">$0.000000</strong>
                 </div>
                 <div class="stat-row">
-                    <span><i class="fa-solid fa-clock-rotate-left"></i> History Window:</span>
+                    <span><i class="fa-solid fa-clock-rotate-left"></i> History:</span>
                     <span id="stat-history-len" class="badge badge-purple">0 / 8 msgs</span>
                 </div>
             </div>
@@ -77,8 +85,8 @@
             <section id="dashboard-tab" class="tab-page active">
                 <header class="page-header glass">
                     <div class="header-info">
-                        <h1><i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê & Architecture</h1>
-                        <p>Theo dõi Token, Chi phí, Tối ưu hóa Model & Sơ đồ kiến trúc đường ống LLM</p>
+                        <h1><i class="fa-solid fa-chart-pie"></i> Dashboard Thống Kê & Enterprise Budget Simulator</h1>
+                        <p>Theo dõi Token, Chi phí, Giả lập Ngân sách Doanh nghiệp & Kiến trúc LLM Pipeline</p>
                     </div>
                     <button id="dash-refresh-btn" class="btn-primary">
                         <i class="fa-solid fa-arrows-rotate"></i> Cập Nhật
@@ -123,9 +131,44 @@
                     </div>
                 </div>
 
+                <!-- DEMO FEATURE: ENTERPRISE BUDGET SIMULATOR -->
+                <div class="sim-panel glass glow-card">
+                    <h3><i class="fa-solid fa-calculator-simple"></i> Giả Lập Ngân Sách Dự Án Sản Phẩm Thật (Enterprise Budget Simulator)</h3>
+                    
+                    <div class="sim-sliders">
+                        <div class="sim-slider-group">
+                            <label><i class="fa-solid fa-users"></i> Số Người Dùng Hàng Ngày (DAU): <span id="sim-dau-val" class="param-num">1,000</span></label>
+                            <input type="range" id="sim-dau-slider" min="100" max="50000" step="100" value="1000">
+                        </div>
+                        <div class="sim-slider-group">
+                            <label><i class="fa-solid fa-comments"></i> Số Lượt Chat / Người Dùng / Ngày: <span id="sim-req-val" class="param-num">10</span></label>
+                            <input type="range" id="sim-req-slider" min="1" max="100" step="1" value="10">
+                        </div>
+                    </div>
+
+                    <div class="sim-results-grid">
+                        <div class="sim-card">
+                            <span class="sim-title">Tổng Queries / Tháng</span>
+                            <h3 id="sim-monthly-queries">300,000</h3>
+                        </div>
+                        <div class="sim-card">
+                            <span class="sim-title">Chi Phí Tháng (GPT-4o)</span>
+                            <h3 id="sim-cost-4o" class="highlight-purple">$450.00 / tháng</h3>
+                        </div>
+                        <div class="sim-card highlight-green-bg">
+                            <span class="sim-title">Chi Phí Tháng (GPT-4o-Mini)</span>
+                            <h3 id="sim-cost-mini" class="highlight-green">$27.00 / tháng</h3>
+                        </div>
+                        <div class="sim-card highlight-gold-bg">
+                            <span class="sim-title">Ngân Sách Tiết Kiệm Hàng Tháng</span>
+                            <h3 id="sim-cost-saved" class="highlight-gold">$423.00 (Tiết kiệm 94%)</h3>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid-2">
                     <div class="dash-panel glass">
-                        <h3><i class="fa-solid fa-chart-column"></i> Phân Phối Token & Dự Toán Quy Mô</h3>
+                        <h3><i class="fa-solid fa-chart-column"></i> Phân Phối Token</h3>
                         <div class="progress-bar-group">
                             <div class="progress-info">
                                 <span>Tỷ lệ Input vs Output Tokens:</span>
@@ -133,28 +176,6 @@
                             </div>
                             <div class="progress-track">
                                 <div class="progress-fill" id="dash-progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-
-                        <hr class="divider">
-
-                        <h4>Dự Toán Chi Phí Khi Scale Quy Mô:</h4>
-                        <div class="projection-grid">
-                            <div class="proj-box">
-                                <span class="proj-title">1,000 Lượt Chat (GPT-4o)</span>
-                                <span class="proj-value" id="proj-1k-gpt4o">$0.00</span>
-                            </div>
-                            <div class="proj-box highlight-green-bg">
-                                <span class="proj-title">1,000 Lượt Chat (GPT-4o-Mini)</span>
-                                <span class="proj-value highlight-green" id="proj-1k-mini">$0.00</span>
-                            </div>
-                            <div class="proj-box">
-                                <span class="proj-title">10,000 Lượt Chat (GPT-4o)</span>
-                                <span class="proj-value" id="proj-10k-gpt4o">$0.00</span>
-                            </div>
-                            <div class="proj-box highlight-green-bg">
-                                <span class="proj-title">10,000 Lượt Chat (GPT-4o-Mini)</span>
-                                <span class="proj-value highlight-green" id="proj-10k-mini">$0.00</span>
                             </div>
                         </div>
                     </div>
@@ -177,12 +198,12 @@
                 </div>
             </section>
 
-            <!-- TAB 1: CHATBOT UI PRO -->
+            <!-- TAB 1: CHATBOT UI PRO DEMO -->
             <section id="chat-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
-                        <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot PRO (Streaming, Voice & Tuning)</h1>
-                        <p>Điều chỉnh Temperature, Top_P, nhập giọng nói Voice, đếm token real-time</p>
+                        <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot PRO (Streaming, Voice & Speedometer)</h1>
+                        <p>Đồng hồ đo tốc độ tok/s, TTFT latency, điều chỉnh parameters & 1-Click Demo Presets</p>
                     </div>
 
                     <div class="header-controls">
@@ -202,6 +223,20 @@
 
                 <div id="custom-persona-box" class="custom-persona-container hidden">
                     <input type="text" id="custom-persona-input" placeholder="Nhập System Prompt / Persona của bạn ở đây..." value="Bạn là một chuyên gia tư vấn AI tận tâm.">
+                </div>
+
+                <!-- 1-CLICK DEMO PRESETS GALLERY -->
+                <div class="demo-presets-bar glass">
+                    <span class="preset-label"><i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click Demo Presets:</span>
+                    <button class="preset-btn" data-prompt="Giải thích sự khác biệt giữa Temperature và Top_P trong LLM bằng một ví dụ thực tế ngắn gọn.">
+                        <i class="fa-solid fa-lightbulb"></i> Giải thích Temp vs Top_P
+                    </button>
+                    <button class="preset-btn" data-prompt="Viết một hàm Python đếm số lượng từ và token của văn bản bằng tiktoken kèm docstring chuẩn.">
+                        <i class="fa-solid fa-code"></i> Code Python Tiktoken
+                    </button>
+                    <button class="preset-btn" data-prompt="Kể cho tôi 3 ứng dụng thực tế hưởng lợi nhất từ cơ chế Streaming API.">
+                        <i class="fa-solid fa-bolt"></i> Ứng dụng Streaming
+                    </button>
                 </div>
 
                 <!-- Hyperparameters Control Tuning Bar -->
@@ -224,7 +259,7 @@
                     <div class="message system-welcome">
                         <div class="msg-avatar"><i class="fa-solid fa-sparkles"></i></div>
                         <div class="msg-bubble">
-                            <p>Xin chào! Mình là Trợ Lý AI Pro. Bạn có thể sử dụng Mic thu âm giọng nói, điều chỉnh Temperature/Top_P, hoặc bấm biểu tượng Loa để đọc văn bản!</p>
+                            <p>Xin chào! Bạn đang ở phiên bản <strong>AI Studio Pro Demo Edition</strong>. Thử bấm các nút <strong>1-Click Demo Presets</strong> phía trên hoặc bật <strong>Mic thu âm</strong> để thuyết trình demo nhé!</p>
                         </div>
                     </div>
                 </div>
@@ -234,7 +269,7 @@
                         <button id="voice-rec-btn" class="btn-icon" title="Nói bằng Giọng Nói (Speech-to-Text)">
                             <i class="fa-solid fa-microphone"></i>
                         </button>
-                        <textarea id="user-input" placeholder="Nhập tin nhắn... (hoặc ấn biểu tượng Mic để nói)" rows="1"></textarea>
+                        <textarea id="user-input" placeholder="Nhập tin nhắn... (hoặc chọn 1-Click Demo Preset phía trên)" rows="1"></textarea>
                         <button id="send-btn" class="btn-primary">
                             <span>Gửi</span> <i class="fa-solid fa-paper-plane"></i>
                         </button>
@@ -297,7 +332,7 @@
                 </div>
             </section>
 
-            <!-- TAB 3: BATCH PROMPT STUDIO (NEW PRO) -->
+            <!-- TAB 3: BATCH PROMPT STUDIO -->
             <section id="batch-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
@@ -326,7 +361,7 @@ Viết câu thơ về trí tuệ nhân tạo"></textarea>
                 </div>
             </section>
 
-            <!-- TAB 4: VISUAL TOKENIZER & LIVE CALCULATOR (NEW PRO) -->
+            <!-- TAB 4: VISUAL TOKENIZER & LIVE CALCULATOR -->
             <section id="calculator-tab" class="tab-page">
                 <header class="page-header glass">
                     <div class="header-info">
@@ -343,7 +378,6 @@ Viết câu thơ về trí tuệ nhân tạo"></textarea>
                         </div>
                         <textarea id="calc-live-text" rows="7" placeholder="Gõ hoặc dán bất kỳ văn bản tiếng Việt/Anh vào đây..."></textarea>
                         
-                        <!-- Color Coded Tokens Visualizer Box -->
                         <h3><i class="fa-solid fa-eye"></i> Mảnh Tokens Trực Quan (Color Chips):</h3>
                         <div id="token-chips-container" class="token-chips-wrapper">
                             <span class="chip-placeholder">Các mảnh token màu sắc sẽ xuất hiện tại đây...</span>
