@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Competency Studio — Trợ Lý & Studio So Sánh LLM</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon"><i class="fa-solid fa-brain-circuit"></i></div>
+                <div class="brand-text">
+                    <h2>AI Studio <span>v1.0</span></h2>
+                    <p>DAY 01 — LLM API</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="chat-tab">
+                    <i class="fa-solid fa-comments"></i> Trợ Lý CLI Chatbot
+                </button>
+                <button class="nav-item" data-tab="compare-tab">
+                    <i class="fa-solid fa-scale-balanced"></i> Model Studio
+                </button>
+                <button class="nav-item" data-tab="calculator-tab">
+                    <i class="fa-solid fa-calculator"></i> Tính Token & Chi Phí
+                </button>
+            </nav>
+
+            <div class="stats-card glass">
+                <h3><i class="fa-solid fa-chart-pie"></i> Thống Kê Phiên Chat</h3>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-rotate-left"></i> Số lượt (Turns):</span>
+                    <strong id="stat-turns">0</strong>
+                </div>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-database"></i> Tổng Tokens:</span>
+                    <strong id="stat-tokens">0</strong>
+                </div>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-coins"></i> Chi phí (USD):</span>
+                    <strong id="stat-cost" class="highlight-green">$0.000000</strong>
+                </div>
+                <div class="stat-row">
+                    <span><i class="fa-solid fa-clock-rotate-left"></i> History:</span>
+                    <span id="stat-history-len" class="badge">0 / 8 msgs</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-badge">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>NguyenTuanThanh (K4)</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- TAB 1: CHATBOT UI -->
+            <section id="chat-tab" class="tab-page active">
+                <header class="page-header glass">
+                    <div class="header-info">
+                        <h1><i class="fa-solid fa-robot"></i> Trợ Lý Chatbot (Streaming & Memory)</h1>
+                        <p>Streaming real-time, nhớ 4 lượt gần nhất, bọc Retry Backoff tự động</p>
+                    </div>
+
+                    <div class="persona-selector">
+                        <label for="persona-select"><i class="fa-solid fa-masks-theater"></i> Chọn Persona:</label>
+                        <select id="persona-select">
+                            <option value="Bạn là trợ giảng thân thiện của khóa AI, trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.">🎓 Trợ Giảng AI Thân Thiện</option>
+                            <option value="Bạn là một Kỹ sư Phần mềm Chuyên nghiệp Senior, đưa ra câu trả lời chuẩn xác, kèm code mẫu tối ưu.">💻 Senior Software Engineer</option>
+                            <option value="Bạn là một nhà sáng tạo nội dung truyền cảm hứng, viết hấp dẫn và giàu cảm xúc.">✍️ Nhà Sáng Tạo Nội Dung</option>
+                            <option value="custom">✏️ Tự Nhập Persona Tùy Chỉnh...</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div id="custom-persona-box" class="custom-persona-container hidden">
+                    <input type="text" id="custom-persona-input" placeholder="Nhập System Prompt / Persona của bạn ở đây..." value="Bạn là một chuyên gia tư vấn AI tận tâm.">
+                </div>
+
+                <div class="chat-viewport glass" id="chat-viewport">
+                    <div class="message system-welcome">
+                        <div class="msg-avatar"><i class="fa-solid fa-sparkles"></i></div>
+                        <div class="msg-bubble">
+                            <p>Xin chào! Mình là Trợ Lý AI của bạn. Hãy gửi câu hỏi bất kỳ để trải nghiệm tính năng streaming token real-time và đo lường chi phí chính xác!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area glass">
+                    <div class="input-wrapper">
+                        <textarea id="user-input" placeholder="Nhập tin nhắn của bạn... (Gõ 'quit' hoặc nhấn Send)" rows="1"></textarea>
+                        <button id="send-btn" class="btn-primary">
+                            <span>Gửi</span> <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                        <button id="clear-chat-btn" class="btn-secondary" title="Xóa lịch sử hội thoại">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <div class="input-hints">
+                        <span><i class="fa-solid fa-keyboard"></i> Nhấn Enter để gửi, Shift+Enter để xuống dòng</span>
+                        <span><i class="fa-solid fa-shield-halved"></i> Retry Backoff active</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: MODEL COMPARISON STUDIO -->
+            <section id="compare-tab" class="tab-page">
+                <header class="page-header glass">
+                    <div class="header-info">
+                        <h1><i class="fa-solid fa-scale-balanced"></i> Model Comparison Studio</h1>
+                        <p>So sánh tốc độ phản hồi (Latency), chất lượng và chi phí giữa <strong>GPT-4o</strong> và <strong>GPT-4o-Mini</strong></p>
+                    </div>
+                </header>
+
+                <div class="compare-input-card glass">
+                    <label for="compare-prompt-input"><i class="fa-solid fa-terminal"></i> Prompt thử nghiệm:</label>
+                    <div class="compare-input-group">
+                        <textarea id="compare-prompt-input" rows="2" placeholder="Ví dụ: Giải thích sự khác biệt giữa Temperature và Top_P trong 2 câu ngắn gọn.">Giải thích sự khác biệt giữa Temperature và Top_P trong 2 câu ngắn gọn.</textarea>
+                        <button id="run-compare-btn" class="btn-gradient">
+                            <i class="fa-solid fa-bolt"></i> So Sánh Ngay
+                        </button>
+                    </div>
+                </div>
+
+                <div class="compare-grid">
+                    <!-- GPT-4o Box -->
+                    <div class="compare-card glass" id="card-gpt4o">
+                        <div class="card-header">
+                            <div class="model-badge badge-purple"><i class="fa-solid fa-brain"></i> GPT-4o</div>
+                            <span class="latency-tag" id="gpt4o-latency">-- ms</span>
+                        </div>
+                        <div class="card-body" id="gpt4o-output">
+                            <p class="placeholder-text">Nhấn "So Sánh Ngay" để xem phản hồi của GPT-4o...</p>
+                        </div>
+                        <div class="card-footer">
+                            <span>Ước tính chi phí: <strong id="gpt4o-cost">$0.000000</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- GPT-4o-Mini Box -->
+                    <div class="compare-card glass" id="card-mini">
+                        <div class="card-header">
+                            <div class="model-badge badge-blue"><i class="fa-solid fa-bolt-lightning"></i> GPT-4o-Mini</div>
+                            <span class="latency-tag" id="mini-latency">-- ms</span>
+                        </div>
+                        <div class="card-body" id="mini-output">
+                            <p class="placeholder-text">Nhấn "So Sánh Ngay" để xem phản hồi của GPT-4o-Mini...</p>
+                        </div>
+                        <div class="card-footer">
+                            <span>Ước tính chi phí: <strong id="mini-cost" class="highlight-green">$0.000000</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: TOKEN & COST CALCULATOR (LIVE REALTIME) -->
+            <section id="calculator-tab" class="tab-page">
+                <header class="page-header glass">
+                    <div class="header-info">
+                        <h1><i class="fa-solid fa-calculator"></i> Token & Cost Live Inspector</h1>
+                        <p>Đếm token và tính toán chi phí **TỰ ĐỘNG REAL-TIME** ngay khi bạn dán hoặc gõ văn bản!</p>
+                    </div>
+                </header>
+
+                <div class="calc-container grid-2">
+                    <div class="calc-box glass">
+                        <div class="calc-box-header">
+                            <h3><i class="fa-solid fa-pen-to-square"></i> Văn bản thử nghiệm (Prompt / Response):</h3>
+                            <button id="calc-clear-text" class="btn-sm"><i class="fa-solid fa-eraser"></i> Xóa text</button>
+                        </div>
+                        <textarea id="calc-live-text" rows="12" placeholder="Gõ hoặc dán bất kỳ văn bản tiếng Việt/Anh vào đây... Token và Chi phí sẽ tự động cập nhật lập tức!"></textarea>
+                    </div>
+
+                    <div class="calc-results glass">
+                        <h3><i class="fa-solid fa-chart-line"></i> Phân Tích Real-time (tiktoken)</h3>
+
+                        <div class="metrics-grid">
+                            <div class="metric-card highlight">
+                                <span class="label"><i class="fa-solid fa-hashtag"></i> Số Tokens:</span>
+                                <span class="value" id="calc-live-tokens">0</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="label"><i class="fa-solid fa-font"></i> Số Từ (Words):</span>
+                                <span class="value" id="calc-live-words">0</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="label"><i class="fa-solid fa-text-height"></i> Số Ký Tự (Chars):</span>
+                                <span class="value" id="calc-live-chars">0</span>
+                            </div>
+                        </div>
+
+                        <hr class="divider">
+
+                        <h4><i class="fa-solid fa-tag"></i> Bảng Dự Toán Chi Phí Tương Ứng:</h4>
+
+                        <div class="model-cost-box">
+                            <div class="cost-item">
+                                <div class="cost-title"><i class="fa-solid fa-brain"></i> Nếu dùng GPT-4o (Input):</div>
+                                <div class="cost-price" id="cost-gpt4o-in">$0.000000</div>
+                            </div>
+                            <div class="cost-item">
+                                <div class="cost-title"><i class="fa-solid fa-brain"></i> Nếu dùng GPT-4o (Output):</div>
+                                <div class="cost-price" id="cost-gpt4o-out">$0.000000</div>
+                            </div>
+                            <div class="cost-item highlight-green-box">
+                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> Nếu dùng GPT-4o-Mini (Input):</div>
+                                <div class="cost-price" id="cost-mini-in">$0.000000</div>
+                            </div>
+                            <div class="cost-item highlight-green-box">
+                                <div class="cost-title"><i class="fa-solid fa-bolt-lightning"></i> Nếu dùng GPT-4o-Mini (Output):</div>
+                                <div class="cost-price" id="cost-mini-out">$0.000000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
